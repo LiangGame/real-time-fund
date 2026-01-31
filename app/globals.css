@@ -86,7 +86,22 @@ body {
 }
 
 .content {
-  padding-top: 84px;
+  padding-top: 100px;
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding-top: 90px;
+  }
+  .navbar {
+    top: 0;
+    left: 0;
+    right: 0;
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
 }
 
 .form {
@@ -150,6 +165,25 @@ body {
   border: 1px solid var(--border);
   background: #0b1220;
   font-size: 12px;
+}
+
+.badge-v {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  font-size: 12px;
+}
+.badge-v span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.badge-v strong {
+  font-size: 11px;
 }
 
 .stat {

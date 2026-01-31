@@ -376,7 +376,7 @@ export default function HomePage() {
                         <span className="muted">#{f.code}</span>
                       </div>
                       <div className="actions">
-                        <div className="badge">
+                        <div className="badge-v">
                           <span>估值时间</span>
                           <strong>{f.gztime || f.time || '-'}</strong>
                         </div>
