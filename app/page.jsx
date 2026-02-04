@@ -713,6 +713,371 @@ function GroupModal({ onClose, onConfirm }) {
   );
 }
 
+function PositionModal({ fund, position, onClose, onSave }) {
+  const [mode, setMode] = useState(position && position.shares > 0 ? 'trade' : 'reset'); // trade: 加/减仓, reset: 覆盖
+  const [type, setType] = useState('buy'); // buy 或 sell
+  const [amount, setAmount] = useState(''); // 加仓：金额
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+
+  const [resetShares, setResetShares] = useState(
+    position?.shares ? position.shares.toFixed(2) : ''
+  );
+  const [resetCostPrice, setResetCostPrice] = useState(
+    position?.costPrice ? position.costPrice.toFixed(4) : ''
+  );
+  const [resetDate, setResetDate] = useState(position?.lastTradeDate || date);
+  const [resetNav, setResetNav] = useState(position?.lastTradeNav ? String(position.lastTradeNav) : '');
+
+  const hasPosition = position && position.shares > 0;
+
+  const currentPrice =
+    fund && fund.estPricedCoverage > 0.05
+      ? Number(fund.estGsz)
+      : Number.isFinite(Number(fund?.gszzl)) && Number(fund?.gszzl) !== 0 // 若有当日涨跌幅但无 gsz，则仍回落到 dwjz
+      ? Number(fund.dwjz)
+      : Number.isFinite(Number(fund?.gsz))
+      ? Number(fund.gsz)
+      : Number(fund?.dwjz);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!fund) return;
+
+    let next = { ...(position || { shares: 0, costPrice: 0, lastTradeDate: null, lastTradeNav: null, totalCost: 0 }) };
+
+    if (mode === 'reset') {
+      const s = parseFloat(resetShares);
+      const cp = parseFloat(resetCostPrice);
+      if (!Number.isFinite(s) || s <= 0 || !Number.isFinite(cp) || cp <= 0) {
+        return;
+      }
+      next.shares = s;
+      next.costPrice = cp;
+      next.totalCost = s * cp;
+      next.lastTradeDate = resetDate || null;
+      const nav = parseFloat(resetNav);
+      next.lastTradeNav = Number.isFinite(nav) && nav > 0 ? nav : cp;
+      onSave(fund.code, next);
+      onClose();
+      return;
+    }
+
+    // trade 模式下：
+    // - 加仓：按金额买入 -> 输入金额，自动按当前净值换算份额
+    // - 减仓：按份额卖出 -> 输入份额，直接减少份额
+    const p = Number(currentPrice);
+    if (!Number.isFinite(p) || p <= 0) return;
+
+    let sharesChange = 0;
+    const num = Math.abs(parseFloat(amount));
+    if (!Number.isFinite(num) || num <= 0) return;
+
+    if (type === 'buy') {
+      // 金额买入
+      sharesChange = num / p;
+    } else {
+      // 份额卖出
+      sharesChange = num;
+    }
+
+    if (!Number.isFinite(sharesChange) || sharesChange <= 0) return;
+
+    if (!next.shares || next.shares < 0) {
+      next = { shares: 0, costPrice: 0, lastTradeDate: null, lastTradeNav: null, totalCost: 0 };
+    }
+
+    if (type === 'buy') {
+      const newShares = next.shares + sharesChange;
+      const newTotalCost = (next.totalCost || next.shares * next.costPrice || 0) + sharesChange * p;
+      next.shares = newShares;
+      next.totalCost = newTotalCost;
+      next.costPrice = newShares > 0 ? newTotalCost / newShares : 0;
+    } else {
+      // 卖出：按当前成本价结转剩余成本
+      const newShares = next.shares - sharesChange;
+      if (newShares <= 0) {
+        next.shares = 0;
+        next.totalCost = 0;
+        next.costPrice = 0;
+      } else {
+        next.shares = newShares;
+        next.costPrice = next.costPrice || (next.totalCost && next.shares ? next.totalCost / next.shares : p);
+        next.totalCost = newShares * next.costPrice;
+      }
+    }
+
+    next.lastTradeDate = date || null;
+    next.lastTradeNav = p;
+
+    onSave(fund.code, next);
+    onClose();
+  };
+
+  const handleClear = () => {
+    if (!fund) return;
+    onSave(fund.code, null); // 清空该基金持仓
+    onClose();
+  };
+
+  const positionValue =
+    hasPosition && Number.isFinite(currentPrice) && currentPrice > 0
+      ? (position.shares * currentPrice).toFixed(2)
+      : null;
+
+  const holdYield =
+    hasPosition && position.costPrice > 0 && Number.isFinite(currentPrice) && currentPrice > 0
+      ? ((currentPrice / position.costPrice - 1) * 100).toFixed(2)
+      : null;
+
+  const recentYield =
+    hasPosition && position.lastTradeNav > 0 && Number.isFinite(currentPrice) && currentPrice > 0
+      ? ((currentPrice / position.lastTradeNav - 1) * 100).toFixed(2)
+      : null;
+
+  return (
+    <motion.div
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="编辑持仓"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="glass card modal"
+        style={{ maxWidth: '480px', width: '92vw' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="title" style={{ marginBottom: 12, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <FolderPlusIcon width="20" height="20" />
+              <span>编辑持仓</span>
+            </div>
+            {fund && (
+              <div className="muted" style={{ fontSize: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <span>{fund.name}</span>
+                <span>#{fund.code}</span>
+              </div>
+            )}
+          </div>
+          <button
+            className="icon-button"
+            onClick={onClose}
+            style={{ border: 'none', background: 'transparent' }}
+          >
+            <CloseIcon width="20" height="20" />
+          </button>
+        </div>
+
+        {hasPosition && (
+          <div className="row" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+            <div className="badge-v">
+              <span>金额</span>
+              <strong>{positionValue ? `${positionValue}` : '—'}</strong>
+            </div>
+            <div className="badge-v">
+              <span>当前持有份额</span>
+              <strong>{position.shares ? position.shares.toFixed(2) : '—'}</strong>
+            </div>
+            <div className="badge-v">
+              <span>成本价</span>
+              <strong>{position.costPrice ? position.costPrice.toFixed(4) : '—'}</strong>
+            </div>
+            <div className="badge-v">
+              <span>持有收益率</span>
+              <strong
+                className={
+                  holdYield
+                    ? parseFloat(holdYield) > 0
+                      ? 'up'
+                      : parseFloat(holdYield) < 0
+                      ? 'down'
+                      : ''
+                    : ''
+                }
+              >
+                {holdYield ? `${parseFloat(holdYield) > 0 ? '+' : ''}${holdYield}%` : '—'}
+              </strong>
+            </div>
+            <div className="badge-v">
+              <span>最近交易日收益</span>
+              <strong
+                className={
+                  recentYield
+                    ? parseFloat(recentYield) > 0
+                      ? 'up'
+                      : parseFloat(recentYield) < 0
+                      ? 'down'
+                      : ''
+                    : ''
+                }
+              >
+                {recentYield ? `${parseFloat(recentYield) > 0 ? '+' : ''}${recentYield}%` : '—'}
+              </strong>
+            </div>
+          </div>
+        )}
+
+        <div className="chips" style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className={`chip ${mode === 'trade' ? 'active' : ''}`}
+            onClick={() => setMode('trade')}
+          >
+            加/减仓（记录一笔交易）
+          </button>
+          <button
+            type="button"
+            className={`chip ${mode === 'reset' ? 'active' : ''}`}
+            onClick={() => setMode('reset')}
+          >
+            覆盖当前持仓
+          </button>
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 12 }}>
+          加/减仓模式适合按笔记录交易；覆盖模式适合直接录入当前总持仓和成本。
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {mode === 'trade' ? (
+            <>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <div className="chips">
+                  {[
+                    { id: 'buy', label: '加仓（买入）' },
+                    { id: 'sell', label: '减仓（卖出）' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`chip ${type === t.id ? 'active' : ''}`}
+                      onClick={() => setType(t.id)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="muted" style={{ display: 'block', marginBottom: 4, fontSize: '14px' }}>
+                  {type === 'buy' ? '本次买入金额（元）' : '本次卖出份额'}
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step={type === 'buy' ? '0.01' : '0.0001'}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder={type === 'buy' ? '例如 1000' : '例如 500.1234'}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="muted" style={{ display: 'block', marginBottom: 4, fontSize: '14px' }}>
+                  交易日期
+                </label>
+                <input
+                  className="input"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="muted" style={{ display: 'block', marginBottom: 4, fontSize: '14px' }}>
+                  当前持仓份额
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  value={resetShares}
+                  onChange={(e) => setResetShares(e.target.value)}
+                  placeholder="例如 1000.12"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="muted" style={{ display: 'block', marginBottom: 4, fontSize: '14px' }}>
+                  成本价（净值）
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  value={resetCostPrice}
+                  onChange={(e) => setResetCostPrice(e.target.value)}
+                  placeholder="例如 1.2345"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="muted" style={{ display: 'block', marginBottom: 4, fontSize: '14px' }}>
+                  最近交易日
+                </label>
+                <input
+                  className="input"
+                  type="date"
+                  value={resetDate}
+                  onChange={(e) => setResetDate(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="muted" style={{ display: 'block', marginBottom: 4, fontSize: '14px' }}>
+                  最近交易净值（用于“距最近交易日涨跌幅”）
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  value={resetNav}
+                  onChange={(e) => setResetNav(e.target.value)}
+                  placeholder="默认等于成本价，可单独填写"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="row" style={{ marginTop: 16, gap: 8 }}>
+            <button type="button" className="button secondary" onClick={onClose} style={{ flex: 1 }}>
+              取消
+            </button>
+            {hasPosition && (
+              <button
+                type="button"
+                className="button danger"
+                onClick={handleClear}
+                style={{ flex: 1 }}
+              >
+                清空持仓
+              </button>
+            )}
+            <button type="submit" className="button" style={{ flex: 1 }}>
+              保存
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function HomePage() {
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -739,6 +1104,10 @@ export default function HomePage() {
   const [groupManageOpen, setGroupManageOpen] = useState(false);
   const [addFundToGroupOpen, setAddFundToGroupOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
+
+  // 持仓信息：按基金 code 存储
+  const [positions, setPositions] = useState({});
+  const [editingPositionFund, setEditingPositionFund] = useState(null);
 
   // 排序状态
   const [sortBy, setSortBy] = useState('default'); // default, name, yield, code
@@ -774,6 +1143,22 @@ export default function HomePage() {
       if (sortBy === 'yield') {
         const valA = typeof a.estGszzl === 'number' ? a.estGszzl : (Number(a.gszzl) || 0);
         const valB = typeof b.estGszzl === 'number' ? b.estGszzl : (Number(b.gszzl) || 0);
+        return valB - valA;
+      }
+      if (sortBy === 'recentYield') {
+        const getCurrentPrice = (f) => {
+          if (f.estPricedCoverage > 0.05) return Number(f.estGsz);
+          if (Number.isFinite(Number(f.gsz))) return Number(f.gsz);
+          return Number(f.dwjz);
+        };
+        const calcRecentYield = (f) => {
+          const pos = positions[f.code];
+          const p = getCurrentPrice(f);
+          if (!pos || !pos.lastTradeNav || !Number.isFinite(p) || p <= 0 || pos.lastTradeNav <= 0) return -Infinity;
+          return (p / pos.lastTradeNav - 1) * 100;
+        };
+        const valA = calcRecentYield(a);
+        const valB = calcRecentYield(b);
         return valB - valA;
       }
       if (sortBy === 'name') return a.name.localeCompare(b.name, 'zh-CN');
@@ -999,8 +1384,32 @@ export default function HomePage() {
       if (savedViewMode === 'card' || savedViewMode === 'list') {
         setViewMode(savedViewMode);
       }
+      // 加载持仓信息
+      const savedPositions = JSON.parse(localStorage.getItem('positions') || '{}');
+      if (savedPositions && typeof savedPositions === 'object') {
+        setPositions(savedPositions);
+      }
     } catch {}
   }, []);
+
+  // 默认收起前 10 重仓股票：初始时将所有已存在基金 code 加入 collapsedCodes
+  useEffect(() => {
+    if (!funds.length) return;
+    setCollapsedCodes(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      funds.forEach((f) => {
+        if (f && f.code && !next.has(f.code)) {
+          next.add(f.code);
+          changed = true;
+        }
+      });
+      if (changed) {
+        localStorage.setItem('collapsedCodes', JSON.stringify(Array.from(next)));
+      }
+      return changed ? next : prev;
+    });
+  }, [funds]);
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -1375,6 +1784,8 @@ export default function HomePage() {
     });
   };
 
+  const [deleteFundConfirm, setDeleteFundConfirm] = useState(null); // { code, name }
+
   const manualRefresh = async () => {
     if (refreshingRef.current) return;
     const codes = Array.from(new Set(funds.map((f) => f.code)));
@@ -1509,6 +1920,13 @@ export default function HomePage() {
           localStorage.setItem('viewMode', data.viewMode);
         }
 
+        // 兼容导入持仓信息（如果存在）
+        if (data.positions && typeof data.positions === 'object') {
+          const mergedPositions = { ...(JSON.parse(localStorage.getItem('positions') || '{}') || {}), ...data.positions };
+          setPositions(mergedPositions);
+          localStorage.setItem('positions', JSON.stringify(mergedPositions));
+        }
+
         // 导入成功后，仅刷新新追加的基金
         if (appendedCodes.length) {
           // 这里需要确保 refreshAll 不会因为闭包问题覆盖掉刚刚合并好的 mergedFunds
@@ -1537,7 +1955,8 @@ export default function HomePage() {
       addFundToGroupOpen || 
       groupManageOpen || 
       groupModalOpen || 
-      successModal.open;
+      successModal.open ||
+      !!editingPositionFund;
     
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -1548,7 +1967,7 @@ export default function HomePage() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [settingsOpen, feedbackOpen, addResultOpen, addFundToGroupOpen, groupManageOpen, groupModalOpen, successModal.open]);
+  }, [settingsOpen, feedbackOpen, addResultOpen, addFundToGroupOpen, groupManageOpen, groupModalOpen, successModal.open, editingPositionFund]);
 
   useEffect(() => {
     const onKey = (ev) => {
@@ -1792,6 +2211,7 @@ export default function HomePage() {
                     {[
                       { id: 'default', label: '默认' },
                       { id: 'yield', label: '涨跌幅' },
+                      { id: 'recentYield', label: '最近交易日收益' },
                       { id: 'name', label: '名称' },
                       { id: 'code', label: '代码' }
                     ].map((s) => (
@@ -1887,20 +2307,99 @@ export default function HomePage() {
                               </div>
                             </div>
                             <div className="table-cell text-right value-cell">
-                              <span style={{ fontWeight: 700 }}>{f.estPricedCoverage > 0.05 ? f.estGsz.toFixed(4) : (f.gsz ?? '—')}</span>
+                              <span style={{ fontWeight: 700 }}>
+                                {f.estPricedCoverage > 0.05 ? f.estGsz.toFixed(4) : (f.gsz ?? '—')}
+                              </span>
                             </div>
                             <div className="table-cell text-right change-cell">
-                              <span className={f.estPricedCoverage > 0.05 ? (f.estGszzl > 0 ? 'up' : f.estGszzl < 0 ? 'down' : '') : (Number(f.gszzl) > 0 ? 'up' : Number(f.gszzl) < 0 ? 'down' : '')} style={{ fontWeight: 700 }}>
-                                {f.estPricedCoverage > 0.05 ? `${f.estGszzl > 0 ? '+' : ''}${f.estGszzl.toFixed(2)}%` : (typeof f.gszzl === 'number' ? `${f.gszzl > 0 ? '+' : ''}${f.gszzl.toFixed(2)}%` : f.gszzl ?? '—')}
+                              <span
+                                className={
+                                  f.estPricedCoverage > 0.05
+                                    ? f.estGszzl > 0
+                                      ? 'up'
+                                      : f.estGszzl < 0
+                                      ? 'down'
+                                      : ''
+                                    : Number(f.gszzl) > 0
+                                    ? 'up'
+                                    : Number(f.gszzl) < 0
+                                    ? 'down'
+                                    : ''
+                                }
+                                style={{ fontWeight: 700 }}
+                              >
+                                {f.estPricedCoverage > 0.05
+                                  ? `${f.estGszzl > 0 ? '+' : ''}${f.estGszzl.toFixed(2)}%`
+                                  : typeof f.gszzl === 'number'
+                                  ? `${f.gszzl > 0 ? '+' : ''}${f.gszzl.toFixed(2)}%`
+                                  : f.gszzl ?? '—'}
                               </span>
                             </div>
                             <div className="table-cell text-right time-cell">
-                              <span className="muted" style={{ fontSize: '12px' }}>{f.gztime || f.time || '-'}</span>
+                              {(() => {
+                                const pos = positions[f.code];
+                                const currentPrice =
+                                  f.estPricedCoverage > 0.05
+                                    ? Number(f.estGsz)
+                                    : Number.isFinite(Number(f.gsz))
+                                    ? Number(f.gsz)
+                                    : Number(f.dwjz);
+                                const hasPos = pos && pos.shares > 0;
+                                const value =
+                                  hasPos && Number.isFinite(currentPrice) && currentPrice > 0
+                                    ? (pos.shares * currentPrice).toFixed(2)
+                                    : null;
+                                const holdYield =
+                                  hasPos && pos.costPrice > 0 && Number.isFinite(currentPrice) && currentPrice > 0
+                                    ? ((currentPrice / pos.costPrice - 1) * 100).toFixed(2)
+                                    : null;
+                                return (
+                                  <div style={{ textAlign: 'right', fontSize: '12px' }}>
+                                    <div className="muted" style={{ fontSize: '11px' }}>
+                                      {f.gztime || f.time || '-'}
+                                    </div>
+                                    {hasPos ? (
+                                      <div style={{ marginTop: 2 }}>
+                                        <span style={{ marginRight: 6 }}>
+                                          {value ? `${value} 元` : '—'}
+                                        </span>
+                                        <span
+                                          className={
+                                            holdYield
+                                              ? parseFloat(holdYield) > 0
+                                                ? 'up'
+                                                : parseFloat(holdYield) < 0
+                                                ? 'down'
+                                                : ''
+                                              : ''
+                                          }
+                                        >
+                                          {holdYield
+                                            ? `${parseFloat(holdYield) > 0 ? '+' : ''}${holdYield}%`
+                                            : '—'}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="muted" style={{ fontSize: '11px', marginTop: 2 }}>
+                                        暂无持仓
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div className="table-cell text-center action-cell" style={{ gap: 4 }}>
                               <button
+                                className="icon-button"
+                                onClick={() => setEditingPositionFund(f)}
+                                title="编辑持仓"
+                                style={{ width: '28px', height: '28px' }}
+                              >
+                                <FolderPlusIcon width="14" height="14" />
+                              </button>
+                              <button
                                 className="icon-button danger"
-                                onClick={() => removeFund(f.code)}
+                                onClick={() => setDeleteFundConfirm({ code: f.code, name: f.name })}
                                 title="删除"
                                 style={{ width: '28px', height: '28px' }}
                               >
@@ -1949,7 +2448,7 @@ export default function HomePage() {
                               <div className="row" style={{ gap: 4 }}>
                                 <button
                                   className="icon-button danger"
-                                  onClick={() => removeFund(f.code)}
+                                  onClick={() => setDeleteFundConfirm({ code: f.code, name: f.name })}
                                   title="删除"
                                   style={{ width: '28px', height: '28px' }}
                                 >
@@ -1960,7 +2459,7 @@ export default function HomePage() {
                           </div>
 
                           <div className="row" style={{ marginBottom: 12 }}>
-                            <Stat label="单位净值" value={f.dwjz ?? '—'} />
+                            <Stat label="昨日净值" value={f.dwjz ?? '—'} />
                             <Stat label="估值净值" value={f.estPricedCoverage > 0.05 ? f.estGsz.toFixed(4) : (f.gsz ?? '—')} />
                             <Stat
                               label="估值涨跌幅"
@@ -1968,6 +2467,100 @@ export default function HomePage() {
                               delta={f.estPricedCoverage > 0.05 ? f.estGszzl : (Number(f.gszzl) || 0)}
                             />
                           </div>
+                          {(() => {
+                            const pos = positions[f.code];
+                            const currentPrice =
+                              f.estPricedCoverage > 0.05
+                                ? Number(f.estGsz)
+                                : Number.isFinite(Number(f.gsz))
+                                ? Number(f.gsz)
+                                : Number(f.dwjz);
+                            const hasPos = pos && pos.shares > 0;
+                            const value =
+                              hasPos && Number.isFinite(currentPrice) && currentPrice > 0
+                                ? (pos.shares * currentPrice).toFixed(2)
+                                : null;
+                            const holdYield =
+                              hasPos && pos.costPrice > 0 && Number.isFinite(currentPrice) && currentPrice > 0
+                                ? ((currentPrice / pos.costPrice - 1) * 100).toFixed(2)
+                                : null;
+                            const recentYield =
+                              hasPos && pos.lastTradeNav > 0 && Number.isFinite(currentPrice) && currentPrice > 0
+                                ? ((currentPrice / pos.lastTradeNav - 1) * 100).toFixed(2)
+                                : null;
+                            return (
+                              <div
+                                className="row"
+                                style={{
+                                  marginBottom: 10,
+                                  marginTop: -4,
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: 8,
+                                }}
+                              >
+                                <div className="badge-v">
+                                  <span>金额</span>
+                                  <strong>{hasPos && value ? `${value}` : '—'}</strong>
+                                </div>
+                                <div className="badge-v">
+                                  <span>当前持有份额</span>
+                                  <strong>
+                                    {hasPos && pos.shares ? pos.shares.toFixed(2) : '—'}
+                                  </strong>
+                                </div>
+                                <div className="badge-v">
+                                  <span>成本价</span>
+                                  <strong>{hasPos && pos.costPrice ? pos.costPrice.toFixed(4) : '—'}</strong>
+                                </div>
+                                <div className="badge-v">
+                                  <span>持有收益率</span>
+                                  <strong
+                                    className={
+                                      holdYield
+                                        ? parseFloat(holdYield) > 0
+                                          ? 'up'
+                                          : parseFloat(holdYield) < 0
+                                          ? 'down'
+                                          : ''
+                                        : ''
+                                    }
+                                  >
+                                    {holdYield ? `${parseFloat(holdYield) > 0 ? '+' : ''}${holdYield}%` : '—'}
+                                  </strong>
+                                </div>
+                                <div className="badge-v">
+                                  <span>最近交易日</span>
+                                  <strong>{hasPos && pos.lastTradeDate ? pos.lastTradeDate : '—'}</strong>
+                                </div>
+                                <div className="badge-v">
+                                  <span>最近交易日收益</span>
+                                  <strong
+                                    className={
+                                      recentYield
+                                        ? parseFloat(recentYield) > 0
+                                          ? 'up'
+                                          : parseFloat(recentYield) < 0
+                                          ? 'down'
+                                          : ''
+                                        : ''
+                                    }
+                                  >
+                                    {recentYield
+                                      ? `${parseFloat(recentYield) > 0 ? '+' : ''}${recentYield}%`
+                                      : '—'}
+                                  </strong>
+                                </div>
+                                <button
+                                  className="button secondary"
+                                  style={{ height: '28px', padding: '0 10px', fontSize: '12px' }}
+                                  onClick={() => setEditingPositionFund(f)}
+                                >
+                                  编辑持仓
+                                </button>
+                              </div>
+                            );
+                          })()}
                           {f.estPricedCoverage > 0.05 && (
                             <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: -8, marginBottom: 10, textAlign: 'right' }}>
                               基于 {Math.round(f.estPricedCoverage * 100)}% 持仓估算
@@ -2112,6 +2705,42 @@ export default function HomePage() {
           <SuccessModal
             message={successModal.message}
             onClose={() => setSuccessModal({ open: false, message: '' })}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteFundConfirm && (
+          <ConfirmModal
+            title="删除基金"
+            message={`确定要删除基金「${deleteFundConfirm.name || ''} #${deleteFundConfirm.code}」吗？该基金的持仓与分组记录也会被移除。`}
+            onConfirm={() => {
+              removeFund(deleteFundConfirm.code);
+              setDeleteFundConfirm(null);
+            }}
+            onCancel={() => setDeleteFundConfirm(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingPositionFund && (
+          <PositionModal
+            fund={editingPositionFund}
+            position={positions[editingPositionFund.code]}
+            onClose={() => setEditingPositionFund(null)}
+            onSave={(code, pos) => {
+              setPositions(prev => {
+                const next = { ...prev };
+                if (!pos) {
+                  delete next[code];
+                } else {
+                  next[code] = pos;
+                }
+                localStorage.setItem('positions', JSON.stringify(next));
+                return next;
+              });
+            }}
           />
         )}
       </AnimatePresence>
