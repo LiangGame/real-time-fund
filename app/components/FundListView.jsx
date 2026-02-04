@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Stat from "./Stat";
+import FundTrendChart from "./FundTrendChart";
 import {
   ChevronIcon,
   ExitIcon,
@@ -287,6 +288,17 @@ export default function FundListView({
                             f.estPricedCoverage > 0.05 ? f.estGszzl : Number(f.gszzl) || 0
                           }
                         />
+                        <Stat
+                          label="昨日涨幅"
+                          value={
+                            typeof f.yesterdayChange === 'number'
+                              ? `${f.yesterdayChange > 0 ? '+' : ''}${f.yesterdayChange.toFixed(
+                                  2
+                                )}%`
+                              : '—'
+                          }
+                          delta={Number.isFinite(Number(f.yesterdayChange)) ? f.yesterdayChange : 0}
+                        />
                       </div>
                       {(() => {
                         const pos = positions[f.code];
@@ -469,6 +481,16 @@ export default function FundListView({
                           </motion.div>
                         )}
                       </AnimatePresence>
+                      {Array.isArray(f.historyTrend) && f.historyTrend.length > 1 && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            marginBottom: 4,
+                          }}
+                        >
+                          <FundTrendChart data={f.historyTrend} />
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

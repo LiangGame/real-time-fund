@@ -36,6 +36,7 @@ const getTencentPrefix = (code) => {
 
 /**
  * 获取单只基金的实时估值及前十重仓（含重仓股当日涨跌幅）
+ * 以及历史净值走势（用于趋势图 / 昨日涨幅等）
  * 完全使用 JSONP / script 注入方式，无服务端依赖
  *
  * @param {string} code 基金代码
@@ -60,6 +61,10 @@ export const fetchFundData = async (code) => {
         return;
       }
 
+      // 东方财富估值接口字段说明：
+      // dwjz: 前一交易日单位净值
+      // gsz:  估算净值
+      // gszzl: 估算涨跌幅（%）
       const gszzlNum = Number(json.gszzl);
       const gzData = {
         code: json.fundcode,
@@ -133,9 +138,41 @@ export const fetchFundData = async (code) => {
             }
           }
 
-          resolve({ ...gzData, holdings });
+          // 同时获取历史净值走势（pingzhongdata）
+          // 示例： https://fund.eastmoney.com/pingzhongdata/519212.js?v=20260204220117
+          // 里面包含 Data_netWorthTrend 等字段
+          let historyTrend = [];
+          let yesterdayChange = null;
+          try {
+            const pingUrl = `https://fund.eastmoney.com/pingzhongdata/${code}.js?v=${Date.now()}`;
+            await loadScript(pingUrl);
+
+            // Data_netWorthTrend 为 [{ x, y, equityReturn, unitMoney }, ...]
+            const trend = Array.isArray(window.Data_netWorthTrend)
+              ? window.Data_netWorthTrend
+              : [];
+
+            if (trend.length > 0) {
+              // 仅保留最近 90 个点，避免对象过大
+              const sliced = trend.slice(-90);
+              historyTrend = sliced.map((item) => ({
+                x: item.x,
+                y: item.y,
+                equityReturn: item.equityReturn,
+              }));
+
+              const last = sliced[sliced.length - 2];
+              if (last && typeof last.equityReturn === 'number') {
+                yesterdayChange = last.equityReturn;
+              }
+            }
+          } catch (e) {
+            console.error('获取历史净值走势失败', e);
+          }
+
+          resolve({ ...gzData, holdings, historyTrend, yesterdayChange });
         })
-        .catch(() => resolve({ ...gzData, holdings: [] }));
+        .catch(() => resolve({ ...gzData, holdings: [], historyTrend: [], yesterdayChange: null }));
     };
 
     scriptGz.onerror = () => {
