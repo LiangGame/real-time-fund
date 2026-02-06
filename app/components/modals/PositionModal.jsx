@@ -5,6 +5,25 @@ import { motion } from 'framer-motion';
 import { FolderPlusIcon, CloseIcon } from '../Icons';
 import GlassDatePicker from '../GlassDatePicker';
 
+function getNavByDate(fund, dateStr) {
+  if (!fund || !Array.isArray(fund.historyTrend) || !dateStr) return null;
+  const [y, m, d] = dateStr.split('-').map((n) => Number(n));
+  if (!y || !m || !d) return null;
+  const targetDay = new Date(y, m - 1, d);
+  targetDay.setHours(0, 0, 0, 0);
+
+  for (let i = fund.historyTrend.length - 1; i >= 0; i -= 1) {
+    const item = fund.historyTrend[i];
+    if (!item || typeof item.x !== 'number' || typeof item.y !== 'number') continue;
+    const day = new Date(item.x);
+    day.setHours(0, 0, 0, 0);
+    if (day.getTime() === targetDay.getTime()) {
+      return item.y;
+    }
+  }
+  return null;
+}
+
 export default function PositionModal({ fund, position, onClose, onSave }) {
   const [mode, setMode] = useState(position && position.shares > 0 ? 'trade' : 'reset');
   const [type, setType] = useState('buy');
@@ -270,7 +289,10 @@ export default function PositionModal({ fund, position, onClose, onSave }) {
                       key={t.id}
                       type="button"
                       className={`chip ${type === t.id ? 'active' : ''}`}
-                      onClick={() => setType(t.id)}
+                      onClick={() => {
+                        setType(t.id);
+                        setAmount('');
+                      }}
                     >
                       {t.label}
                     </button>
@@ -288,11 +310,39 @@ export default function PositionModal({ fund, position, onClose, onSave }) {
                   className="input"
                   type="number"
                   min="0"
-                  step={type === 'buy' ? '0.01' : '0.0001'}
+                  step={type === 'buy' ? '0.01' : '0.01'}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder={type === 'buy' ? '例如 1000' : '例如 500.1234'}
                 />
+                {type === 'sell' && hasPosition && (
+                  <div
+                    className="chips"
+                    style={{ marginTop: 8, flexWrap: 'wrap', gap: 6 }}
+                  >
+                    {[
+                      { ratio: 0.25, label: '1/4' },
+                      { ratio: 1 / 3, label: '1/3' },
+                      { ratio: 0.5, label: '1/2' },
+                      { ratio: 1, label: '全部' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        className="chip"
+                        style={{ height: 28, padding: '0 10px', fontSize: 12 }}
+                        onClick={() => {
+                          const shares = position?.shares || 0;
+                          if (!shares || shares <= 0) return;
+                          const val = shares * opt.ratio;
+                          setAmount(val.toFixed(2));
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label
@@ -352,7 +402,13 @@ export default function PositionModal({ fund, position, onClose, onSave }) {
                 </label>
                 <GlassDatePicker
                   value={resetDate}
-                  onChange={setResetDate}
+                  onChange={(nextDate) => {
+                    setResetDate(nextDate);
+                    const autoNav = getNavByDate(fund, nextDate);
+                    if (Number.isFinite(autoNav) && autoNav > 0) {
+                      setResetNav(autoNav.toFixed(4));
+                    }
+                  }}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 12 }}>
