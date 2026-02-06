@@ -158,6 +158,16 @@ body {
   transform: translateY(0);
 }
 
+.button.danger {
+  background: linear-gradient(180deg, #ef4444, #f87171);
+  color: #2b0b0b;
+  border-color: transparent;
+}
+
+.button.danger:hover {
+  box-shadow: 0 10px 20px rgba(248,113,113,0.25);
+}
+
 .card {
   padding: 16px;
 }
