@@ -201,8 +201,9 @@ body {
 
 .stat {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 .stat .label {
   font-size: 12px;
@@ -232,6 +233,7 @@ body {
   }
   .stat {
     flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
     min-width: 0;
   }

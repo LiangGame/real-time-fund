@@ -74,9 +74,8 @@ export default function FundListView({
                           </button>
                         ) : (
                           <button
-                            className={`icon-button fav-button ${
-                              favorites.has(f.code) ? 'active' : ''
-                            }`}
+                            className={`icon-button fav-button ${favorites.has(f.code) ? 'active' : ''
+                              }`}
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleFavorite(f.code);
@@ -109,21 +108,21 @@ export default function FundListView({
                               ? f.estGszzl > 0
                                 ? 'up'
                                 : f.estGszzl < 0
-                                ? 'down'
-                                : ''
+                                  ? 'down'
+                                  : ''
                               : Number(f.gszzl) > 0
-                              ? 'up'
-                              : Number(f.gszzl) < 0
-                              ? 'down'
-                              : ''
+                                ? 'up'
+                                : Number(f.gszzl) < 0
+                                  ? 'down'
+                                  : ''
                           }
                           style={{ fontWeight: 700 }}
                         >
                           {f.estPricedCoverage > 0.05
                             ? `${f.estGszzl > 0 ? '+' : ''}${f.estGszzl.toFixed(2)}%`
                             : typeof f.gszzl === 'number'
-                            ? `${f.gszzl > 0 ? '+' : ''}${f.gszzl.toFixed(2)}%`
-                            : f.gszzl ?? '—'}
+                              ? `${f.gszzl > 0 ? '+' : ''}${f.gszzl.toFixed(2)}%`
+                              : f.gszzl ?? '—'}
                         </span>
                       </div>
                       <div className="table-cell text-right time-cell">
@@ -133,8 +132,8 @@ export default function FundListView({
                             f.estPricedCoverage > 0.05
                               ? Number(f.estGsz)
                               : Number.isFinite(Number(f.gsz))
-                              ? Number(f.gsz)
-                              : Number(f.dwjz);
+                                ? Number(f.gsz)
+                                : Number(f.dwjz);
                           const hasPos = pos && pos.shares > 0;
                           const value =
                             hasPos && Number.isFinite(currentPrice) && currentPrice > 0
@@ -142,9 +141,9 @@ export default function FundListView({
                               : null;
                           const holdYield =
                             hasPos &&
-                            pos.costPrice > 0 &&
-                            Number.isFinite(currentPrice) &&
-                            currentPrice > 0
+                              pos.costPrice > 0 &&
+                              Number.isFinite(currentPrice) &&
+                              currentPrice > 0
                               ? ((currentPrice / pos.costPrice - 1) * 100).toFixed(2)
                               : null;
                           return (
@@ -163,8 +162,8 @@ export default function FundListView({
                                         ? parseFloat(holdYield) > 0
                                           ? 'up'
                                           : parseFloat(holdYield) < 0
-                                          ? 'down'
-                                          : ''
+                                            ? 'down'
+                                            : ''
                                         : ''
                                     }
                                   >
@@ -225,9 +224,8 @@ export default function FundListView({
                             </button>
                           ) : (
                             <button
-                              className={`icon-button fav-button ${
-                                favorites.has(f.code) ? 'active' : ''
-                              }`}
+                              className={`icon-button fav-button ${favorites.has(f.code) ? 'active' : ''
+                                }`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onToggleFavorite(f.code);
@@ -265,49 +263,14 @@ export default function FundListView({
                         </div>
                       </div>
 
-                      <div className="row" style={{ marginBottom: 12 }}>
-                        <Stat label="昨日净值" value={f.dwjz ?? '—'} />
-                        <Stat
-                          label="估值净值"
-                          value={
-                            f.estPricedCoverage > 0.05
-                              ? f.estGsz.toFixed(4)
-                              : f.gsz ?? '—'
-                          }
-                        />
-                        <Stat
-                          label="估值涨跌幅"
-                          value={
-                            f.estPricedCoverage > 0.05
-                              ? `${f.estGszzl > 0 ? '+' : ''}${f.estGszzl.toFixed(2)}%`
-                              : typeof f.gszzl === 'number'
-                              ? `${f.gszzl > 0 ? '+' : ''}${f.gszzl.toFixed(2)}%`
-                              : f.gszzl ?? '—'
-                          }
-                          delta={
-                            f.estPricedCoverage > 0.05 ? f.estGszzl : Number(f.gszzl) || 0
-                          }
-                        />
-                        <Stat
-                          label="昨日涨幅"
-                          value={
-                            typeof f.yesterdayChange === 'number'
-                              ? `${f.yesterdayChange > 0 ? '+' : ''}${f.yesterdayChange.toFixed(
-                                  2
-                                )}%`
-                              : '—'
-                          }
-                          delta={Number.isFinite(Number(f.yesterdayChange)) ? f.yesterdayChange : 0}
-                        />
-                      </div>
                       {(() => {
                         const pos = positions[f.code];
                         const currentPrice =
                           f.estPricedCoverage > 0.05
                             ? Number(f.estGsz)
                             : Number.isFinite(Number(f.gsz))
-                            ? Number(f.gsz)
-                            : Number(f.dwjz);
+                              ? Number(f.gsz)
+                              : Number(f.dwjz);
                         const hasPos = pos && pos.shares > 0;
                         const value =
                           hasPos && Number.isFinite(currentPrice) && currentPrice > 0
@@ -315,95 +278,132 @@ export default function FundListView({
                             : null;
                         const holdYield =
                           hasPos &&
-                          pos.costPrice > 0 &&
-                          Number.isFinite(currentPrice) &&
-                          currentPrice > 0
+                            pos.costPrice > 0 &&
+                            Number.isFinite(currentPrice) &&
+                            currentPrice > 0
                             ? ((currentPrice / pos.costPrice - 1) * 100).toFixed(2)
                             : null;
                         const recentYield =
                           hasPos &&
-                          pos.lastTradeNav > 0 &&
-                          Number.isFinite(currentPrice) &&
-                          currentPrice > 0
+                            pos.lastTradeNav > 0 &&
+                            Number.isFinite(currentPrice) &&
+                            currentPrice > 0
                             ? ((currentPrice / pos.lastTradeNav - 1) * 100).toFixed(2)
                             : null;
                         return (
-                          <div
-                            className="row"
-                            style={{
-                              marginBottom: 10,
-                              marginTop: -4,
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: 8,
-                            }}
-                          >
-                            <div className="badge-v">
-                              <span>金额</span>
-                              <strong>{hasPos && value ? `${value}` : '—'}</strong>
-                            </div>
-                            <div className="badge-v">
-                              <span>当前持有份额</span>
-                              <strong>
-                                {hasPos && pos.shares ? pos.shares.toFixed(2) : '—'}
-                              </strong>
-                            </div>
-                            <div className="badge-v">
-                              <span>成本价</span>
-                              <strong>
-                                {hasPos && pos.costPrice ? pos.costPrice.toFixed(4) : '—'}
-                              </strong>
-                            </div>
-                            <div className="badge-v">
-                              <span>持有收益率</span>
-                              <strong
-                                className={
-                                  holdYield
-                                    ? parseFloat(holdYield) > 0
-                                      ? 'up'
-                                      : parseFloat(holdYield) < 0
-                                      ? 'down'
-                                      : ''
-                                    : ''
+                          <>
+                            <div className="row" style={{ marginBottom: 12 }}>
+                              {hasPos ? <Stat label="金额" value={value ?? '—'} /> : null}
+                              <Stat label="昨日净值" value={f.dwjz ?? '—'} />
+                              <Stat
+                                label="估值净值"
+                                value={
+                                  f.estPricedCoverage > 0.05
+                                    ? f.estGsz.toFixed(4)
+                                    : f.gsz ?? '—'
                                 }
-                              >
-                                {holdYield
-                                  ? `${parseFloat(holdYield) > 0 ? '+' : ''}${holdYield}%`
-                                  : '—'}
-                              </strong>
-                            </div>
-                            <div className="badge-v">
-                              <span>最近交易日</span>
-                              <strong>
-                                {hasPos && pos.lastTradeDate ? pos.lastTradeDate : '—'}
-                              </strong>
-                            </div>
-                            <div className="badge-v">
-                              <span>最近交易日收益</span>
-                              <strong
-                                className={
-                                  recentYield
-                                    ? parseFloat(recentYield) > 0
-                                      ? 'up'
-                                      : parseFloat(recentYield) < 0
-                                      ? 'down'
-                                      : ''
-                                    : ''
+                              />
+                              <Stat
+                                label="估值涨跌幅"
+                                value={
+                                  f.estPricedCoverage > 0.05
+                                    ? `${f.estGszzl > 0 ? '+' : ''}${f.estGszzl.toFixed(2)}%`
+                                    : typeof f.gszzl === 'number'
+                                      ? `${f.gszzl > 0 ? '+' : ''}${f.gszzl.toFixed(2)}%`
+                                      : f.gszzl ?? '—'
                                 }
-                              >
-                                {recentYield
-                                  ? `${parseFloat(recentYield) > 0 ? '+' : ''}${recentYield}%`
-                                  : '—'}
-                              </strong>
+                                delta={
+                                  f.estPricedCoverage > 0.05 ? f.estGszzl : Number(f.gszzl) || 0
+                                }
+                              />
+                              <Stat
+                                label="昨日涨幅"
+                                value={
+                                  typeof f.yesterdayChange === 'number'
+                                    ? `${f.yesterdayChange > 0 ? '+' : ''}${f.yesterdayChange.toFixed(
+                                      2
+                                    )}%`
+                                    : '—'
+                                }
+                                delta={
+                                  Number.isFinite(Number(f.yesterdayChange)) ? f.yesterdayChange : 0
+                                }
+                              />
                             </div>
-                            <button
-                              className="button secondary"
-                              style={{ height: '28px', padding: '0 10px', fontSize: '12px' }}
-                              onClick={() => onEditPosition(f)}
+
+                            <div
+                              className="row"
+                              style={{
+                                marginBottom: 10,
+                                marginTop: -4,
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 8,
+                              }}
                             >
-                              编辑持仓
-                            </button>
-                          </div>
+                              <div className="badge-v">
+                                <span>当前持有份额</span>
+                                <strong>
+                                  {hasPos && pos.shares ? pos.shares.toFixed(2) : '—'}
+                                </strong>
+                              </div>
+                              <div className="badge-v">
+                                <span>成本价</span>
+                                <strong>
+                                  {hasPos && pos.costPrice ? pos.costPrice.toFixed(4) : '—'}
+                                </strong>
+                              </div>
+                              <div className="badge-v">
+                                <span>持有收益率</span>
+                                <strong
+                                  className={
+                                    holdYield
+                                      ? parseFloat(holdYield) > 0
+                                        ? 'up'
+                                        : parseFloat(holdYield) < 0
+                                          ? 'down'
+                                          : ''
+                                      : ''
+                                  }
+                                >
+                                  {holdYield
+                                    ? `${parseFloat(holdYield) > 0 ? '+' : ''}${holdYield}%`
+                                    : '—'}
+                                </strong>
+                              </div>
+                              <div className="badge-v">
+                                <span>最近交易日</span>
+                                <strong>
+                                  {hasPos && pos.lastTradeDate ? pos.lastTradeDate : '—'}
+                                </strong>
+                              </div>
+                              <div className="badge-v">
+                                <span>最近交易日收益</span>
+                                <strong
+                                  className={
+                                    recentYield
+                                      ? parseFloat(recentYield) > 0
+                                        ? 'up'
+                                        : parseFloat(recentYield) < 0
+                                          ? 'down'
+                                          : ''
+                                      : ''
+                                  }
+                                >
+                                  {recentYield
+                                    ? `${parseFloat(recentYield) > 0 ? '+' : ''}${recentYield}%`
+                                    : '—'}
+                                </strong>
+                              </div>
+                              <button
+                                className="button secondary"
+                                style={{ height: '28px', padding: '0 10px', fontSize: '12px' }}
+                                onClick={() => onEditPosition(f)}
+                              >
+                                编辑持仓
+                              </button>
+                            </div>
+                          </>
                         );
                       })()}
                       {f.estPricedCoverage > 0.05 && (
@@ -459,9 +459,8 @@ export default function FundListView({
                                     <div className="values">
                                       {typeof h.change === 'number' && (
                                         <span
-                                          className={`badge ${
-                                            h.change > 0 ? 'up' : h.change < 0 ? 'down' : ''
-                                          }`}
+                                          className={`badge ${h.change > 0 ? 'up' : h.change < 0 ? 'down' : ''
+                                            }`}
                                           style={{ marginRight: 8 }}
                                         >
                                           {h.change > 0 ? '+' : ''}
