@@ -1,6 +1,7 @@
 'use client';
 
 import { RefreshIcon, SettingsIcon } from './Icons';
+import githubImg from "../assets/github.svg";
 
 export default function Navbar({
   refreshMs,
@@ -26,6 +27,7 @@ export default function Navbar({
             {syncStatus}
           </div>
         )}
+        <img alt="项目Github地址" src={githubImg.src} style={{ width: '30px', height: '30px', cursor: 'pointer' }} onClick={() => window.open("https://github.com/LiangGame/real-time-fund")} />
         <div className="badge" title="当前刷新频率">
           <span>刷新</span>
           <strong>{Math.round(refreshMs / 1000)}秒</strong>
