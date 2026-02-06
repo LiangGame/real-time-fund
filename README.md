@@ -1,7 +1,7 @@
 # 实时基金估值 (Real-time Fund Valuation)
 
 一个基于 Next.js 开发的纯前端基金估值与重仓股实时追踪工具。采用玻璃拟态设计（Glassmorphism），支持移动端适配，且无需后端服务器即可运行。
-预览地址：[https://hzm0321.github.io/real-time-fund/](https://hzm0321.github.io/real-time-fund/)
+预览地址：[https://lianggame.github.io/real-time-fund/](https://lianggame.github.io/real-time-fund/)
 
 ## ✨ 特性
 
@@ -30,7 +30,7 @@
 
 1. 克隆仓库：
    ```bash
-   git clone https://github.com/hzm0321/real-time-fund.git
+   git clone https://github.com/LiangGame/real-time-fund.git
    cd real-time-fund
    ```
 
@@ -86,4 +86,6 @@ npm run build
 完整协议文本见仓库根目录 [LICENSE](./LICENSE) 文件，或 [GNU AGPL v3 官方说明](https://www.gnu.org/licenses/agpl-3.0.html)。
 
 ---
-Made by [hzm](https://github.com/hzm0321)
+Made by [LiangGame](https://github.com/LiangGame/real-time-fund)
+
+本项目在 [hzm0321/real-time-fund](https://github.com/hzm0321/real-time-fund) 的基础上进行了二次开发与功能扩展，感谢原作者的开源贡献。

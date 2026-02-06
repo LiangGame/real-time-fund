@@ -14,13 +14,20 @@ export default function FeedbackModal({ onClose }) {
     setSubmitting(true);
     setError('');
 
+    const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+    if (!accessKey) {
+      setSubmitting(false);
+      setError('服务配置错误：缺少表单提交密钥，请联系站长。');
+      return;
+    }
+
     const formData = new FormData(e.target);
     const nickname = formData.get('nickname')?.trim();
     if (!nickname) {
       formData.set('nickname', '匿名');
     }
 
-    formData.append('access_key', 'c390fbb1-77e0-4aab-a939-caa75edc7319');
+    formData.append('access_key', accessKey);
     formData.append('subject', '基估宝 - 用户反馈');
 
     try {
@@ -150,7 +157,7 @@ export default function FeedbackModal({ onClose }) {
               <p className="muted" style={{ fontSize: '12px', lineHeight: '1.6' }}>
                 如果您有 Github 账号，也可以在本项目
                 <a
-                  href="https://github.com/hzm0321/real-time-fund/issues"
+                  href="https://github.com/LiangGame/real-time-fund/issues"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link-button"
