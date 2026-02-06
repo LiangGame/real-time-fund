@@ -1,8 +1,12 @@
 ## 实时基金估值 | 基金实时净值查询与重仓追踪工具 (Real-time Fund Valuation)
 
 一个基于 Next.js 开发的 **纯前端基金实时估值工具**，支持 **基金实时净值查询、基金盘中估值监控、自选基金管理、基金重仓股实时行情追踪**。
+
 采用玻璃拟态设计（Glassmorphism），移动端友好，无需后端服务器即可运行，适合作为 **基金投资者个人基金看板 / 自用基金估值面板**。
+
 预览地址：[https://lianggame.github.io/real-time-fund/](https://lianggame.github.io/real-time-fund/)
+
+![预览截图](./docs/website.png)
 
 ## ✨ 特性
 
