@@ -79,7 +79,8 @@ export default function HomePage() {
   const [editingPositionFund, setEditingPositionFund] = useState(null);
 
   // 排序状态
-  const [sortBy, setSortBy] = useState('default'); // default, name, yield, code
+  const [sortBy, setSortBy] = useState('default'); // default, name, yield, code, recentYield
+  const [sortOrder, setSortOrder] = useState('desc'); // asc | desc
 
   // 反馈弹窗状态
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -139,11 +140,14 @@ export default function HomePage() {
       return group ? group.codes.includes(f.code) : true;
     })
     .sort((a, b) => {
+      const dir = sortOrder === 'asc' ? 1 : -1;
+
       if (sortBy === 'yield') {
         const valA = typeof a.estGszzl === 'number' ? a.estGszzl : (Number(a.gszzl) || 0);
         const valB = typeof b.estGszzl === 'number' ? b.estGszzl : (Number(b.gszzl) || 0);
-        return valB - valA;
+        return dir * (valA - valB);
       }
+
       if (sortBy === 'recentYield') {
         const getCurrentPrice = (f) => {
           if (f.estPricedCoverage > 0.05) return Number(f.estGsz);
@@ -158,10 +162,19 @@ export default function HomePage() {
         };
         const valA = calcRecentYield(a);
         const valB = calcRecentYield(b);
-        return valB - valA;
+        return dir * (valA - valB);
       }
-      if (sortBy === 'name') return a.name.localeCompare(b.name, 'zh-CN');
-      if (sortBy === 'code') return a.code.localeCompare(b.code);
+
+      if (sortBy === 'name') {
+        const cmp = a.name.localeCompare(b.name, 'zh-CN');
+        return dir * cmp;
+      }
+
+      if (sortBy === 'code') {
+        const cmp = a.code.localeCompare(b.code);
+        return dir * cmp;
+      }
+
       return 0;
     });
 
@@ -467,6 +480,8 @@ export default function HomePage() {
             }}
             sortBy={sortBy}
             onChangeSortBy={setSortBy}
+            sortOrder={sortOrder}
+            onChangeSortOrder={setSortOrder}
             onOpenGroupManage={() => setGroupManageOpen(true)}
             onOpenGroupModal={() => setGroupModalOpen(true)}
           />

@@ -4,6 +4,146 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlusIcon, SortIcon, GridIcon, ListIcon } from './Icons';
 
+function GlassSelect({ value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="glass-select"
+      style={{ position: 'relative', minWidth: 130 }}
+    >
+      <button
+        type="button"
+        className="glass-select-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          width: '100%',
+          height: 28,
+          padding: '0 10px',
+          borderRadius: 999,
+          border: '1px solid var(--border)',
+          background: 'rgba(255,255,255,0.05)',
+          color: 'var(--text)',
+          fontSize: 12,
+          cursor: 'pointer',
+          outline: 'none',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+        }}
+      >
+        <span
+          style={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {selected?.label}
+        </span>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 16,
+            height: 16,
+            borderRadius: '999px',
+            background: 'rgba(0,0,0,0.35)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <span
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '4px solid transparent',
+              borderRight: '4px solid transparent',
+              borderTop: '5px solid var(--muted)',
+              transform: open ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.16s ease-out',
+            }}
+          />
+        </span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="glass-select-menu"
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              right: 0,
+              minWidth: '100%',
+              padding: 4,
+              borderRadius: 12,
+              background: 'rgba(15,23,42,0.98)',
+              border: '1px solid var(--border)',
+              boxShadow: '0 18px 45px rgba(15,23,42,0.75)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              zIndex: 20,
+            }}
+          >
+            {options.map((opt) => {
+              const active = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange?.(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`glass-select-item ${active ? 'active' : ''}`}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: active
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'transparent',
+                    color: active ? 'var(--text)' : 'var(--muted)',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function FundFilterBar({
   fundsCount,
   favoritesCount,
@@ -14,6 +154,8 @@ export default function FundFilterBar({
   onChangeViewMode,
   sortBy,
   onChangeSortBy,
+  sortOrder = 'desc',
+  onChangeSortOrder,
   onOpenGroupManage,
   onOpenGroupModal,
 }) {
@@ -217,24 +359,45 @@ export default function FundFilterBar({
             <SortIcon width="14" height="14" />
             排序
           </span>
-          <div className="chips">
-            {[
-              { id: 'default', label: '默认' },
-              { id: 'yield', label: '涨跌幅' },
-              { id: 'recentYield', label: '最近交易日收益' },
-              { id: 'name', label: '名称' },
-              { id: 'code', label: '代码' },
-            ].map((s) => (
-              <button
-                key={s.id}
-                className={`chip ${sortBy === s.id ? 'active' : ''}`}
-                onClick={() => onChangeSortBy(s.id)}
-                style={{ height: '28px', fontSize: '12px', padding: '0 10px' }}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+          <GlassSelect
+            value={sortBy}
+            onChange={(val) => onChangeSortBy(val)}
+            options={[
+              { value: 'default', label: '默认' },
+              { value: 'yield', label: '涨跌幅' },
+              { value: 'recentYield', label: '最近交易日收益' },
+              { value: 'name', label: '名称' },
+              { value: 'code', label: '代码' },
+            ]}
+          />
+          <button
+            className="chip"
+            onClick={() => {
+              const nextOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+              if (onChangeSortOrder) {
+                onChangeSortOrder(nextOrder);
+              }
+            }}
+            style={{
+              height: '28px',
+              fontSize: '12px',
+              padding: '0 12px',
+              borderRadius: 999,
+              border: '1px solid var(--border)',
+              background:
+                sortOrder === 'asc'
+                  ? 'var(--primary)'
+                  : 'rgba(255,255,255,0.06)',
+              color: sortOrder === 'asc' ? '#05263b' : 'var(--muted)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span style={{ fontSize: 12 }}>
+              {sortOrder === 'asc' ? '升序 ↑' : '降序 ↓'}
+            </span>
+          </button>
         </div>
       </div>
     </div>
